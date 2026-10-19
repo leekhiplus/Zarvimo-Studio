@@ -109,7 +109,19 @@ jobs:
 
       - name: Build debug APK
         working-directory: ${{ env.PROJECT_DIR }}
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon --console=plain 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Show build errors (only if build failed)
+        if: failure()
+        run: |
+          {
+            echo '## Build errors'
+            echo '```'
+            grep -nE '^e: |error:|What went wrong|FAILED|Execution failed|Caused by|Unresolved|Could not' "$RUNNER_TEMP/build.log" | head -60 || true
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Collect APK
         run: |
